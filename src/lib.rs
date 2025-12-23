@@ -66,11 +66,17 @@ impl LlmClient {
         // Also check explicit key pools
         for (name, pool_config) in &config.key_pools {
             if !key_pools.contains_key(name) {
-                let keys: Vec<String> = pool_config
-                    .keys_env
-                    .iter()
-                    .filter_map(|env| std::env::var(env).ok())
-                    .collect();
+                let mut keys = Vec::new();
+
+                // Load from env vars
+                for env in &pool_config.keys_env {
+                    if let Ok(key) = std::env::var(env) {
+                        keys.push(key);
+                    }
+                }
+
+                // Load raw keys
+                keys.extend(pool_config.keys.clone());
 
                 if !keys.is_empty() {
                     key_pools.insert(

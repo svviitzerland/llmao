@@ -83,7 +83,12 @@ pub struct RateLimitConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyPoolConfig {
     /// List of environment variable names containing API keys
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub keys_env: Vec<String>,
+
+    /// List of raw API keys (alternative to keys_env)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keys: Vec<String>,
 
     /// Rotation strategy
     #[serde(default)]
