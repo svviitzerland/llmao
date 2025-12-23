@@ -1,19 +1,19 @@
 """Example 1: Simple Single Model
 
-Basic usage with default configuration (from environment variables or default registry).
+Basic usage with environment variables for API keys.
+Set CEREBRAS_API_KEY environment variable before running.
 """
-import os
 from llmao_py import LLMClient
 
-# Ensure key is set
-# os.environ["CEREBRAS_API_KEY"] = "your-key-here"
+# Keys are loaded from environment variables automatically
+# export CEREBRAS_API_KEY="your-key-here"
 
 client = LLMClient()
 
 print("Sending request...")
 response = client.completion(
-    model="cerebras/llama3.1-70b",
-    messages=[{"role": "user", "content": "Hello! Say hi in one word."}]
+    model="cerebras/llama3.1-70b"
+    [{"role": "user", "content": "Hello! Say hi in one word."}],
 )
 
 print(f"Response: {response['choices'][0]['message']['content']}")

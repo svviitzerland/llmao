@@ -1,44 +1,28 @@
 """Example 3: Programmatic Configuration
 
-Configuring LLMAO directly with a dictionary (no config file needed).
-Useful for dynamic configuration or when config is loaded from other sources.
+Configure LLMAO directly with a dictionary (no config file needed).
+When models are defined in config, you don't need to specify model in completion().
 """
-import os
 from llmao_py import LLMClient
 
 # Define configuration in code
-# This overrides any config files
-my_config = {
-    # Provider-level config with multiple models and keys
+config = {
     "cerebras": {
-        "models": ["llama3.1-70b"],
+        "models": ["llama3.1-8b", "zai-glm-4.6"],
         "keys": [
-            os.environ.get("CEREBRAS_API_KEY", "csk-placeholder"),
-            "csk-backup-key" 
+            "your-cerebras-key-1",
+            "your-cerebras-key-2",
         ],
         "rotation_strategy": "round_robin"
-    },
-    
-    # Specific model config
-    "groq/llama-3.1-70b-versatile": {
-        "keys": ["gsk-placeholder-key"]
     }
 }
 
 print("Initializing with dictionary config...")
-client = LLMClient(config=my_config)
+client = LLMClient(config=config)
 
-print("\nConfig loaded:")
-info = client.provider_info("cerebras")
-print(f"Cerebras models: {info.get('models')}")
-print(f"Has keys: {info.get('has_keys')}")
+print(f"Configured models: {client.models()}")
 
-print("\nSending request...")
-try:
-    response = client.completion(
-        model="cerebras/llama3.1-70b",
-        messages=[{"role": "user", "content": "Hello!"}]
-    )
-    print(f"Response: {response['choices'][0]['message']['content']}")
-except Exception as e:
-    print(f"Error (likely due to placeholder keys): {e}")
+# No need to specify model - uses the first one from config
+print("\nSending request (model auto-selected from config)...")
+response = client.completion([{"role": "user", "content": "Hello!"}])
+print(f"Response: {response['choices'][0]['message']['content']}")

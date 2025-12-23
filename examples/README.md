@@ -1,29 +1,26 @@
 # LLMAO Examples
 
-This directory contains examples demonstrating different ways to configure and use LLMAO.
+Examples demonstrating different ways to configure and use LLMAO.
 
 ## Examples
 
-- **[`simple_chat.py`](simple_chat.py)**:  
-  Basic usage. Relies on environment variables or default registry settings.
+| File | Description |
+|------|-------------|
+| [`simple_chat.py`](simple_chat.py) | Basic usage with environment variables |
+| [`config_file.py`](config_file.py) | Load configuration from `config.json` |
+| [`multi_provider.py`](multi_provider.py) | Multiple providers with key rotation |
+| [`programmatic_config.py`](programmatic_config.py) | Dictionary-based configuration (no config file) |
+| [`custom_provider.py`](custom_provider.py) | Custom provider with `base_url` |
 
-- **[`multi_provider.py`](multi_provider.py)**:  
-  Demonstrates how to use a `config.json` file to manage multiple providers and API keys (with rotation).
+## Quick Start
 
-- **[`programmatic_config.py`](programmatic_config.py)**:  
-  **New!** Shows how to configure LLMAO entirely in code using a dictionary, without needing external config files.
-
-- **[`custom_provider.py`](custom_provider.py)**:  
-  Shows how to use a provider that isn't in the built-in registry by specifying a `base_url`.
-
-## Running the Examples
-
-Make sure you have installed the package:
 ```bash
+# Install
 pip install llmao-py
-```
 
-Then run any example:
-```bash
+# Set your API key
+export CEREBRAS_API_KEY="your-key-here"
+
+# Run example
 python simple_chat.py
 ```

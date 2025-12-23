@@ -1,45 +1,44 @@
-"""Example 2: Multiple Providers with Key Rotation
+"""Example 2: Multiple Providers
 
-Using a config.json file to manage multiple keys and providers.
+Configure multiple providers with different API keys.
+Specify model when calling completion() to choose which provider to use.
 """
-import json
 from llmao_py import LLMClient
 
-# Create a temporary config file for demonstration
+# Config with multiple providers
 config = {
     "cerebras": {
-        "models": ["llama3.1-70b", "llama3.3-70b"],
-        "keys": ["csk-key1", "csk-key2"],
+        "models": ["llama3.1-8b"],
+        "keys": ["your-cerebras-key"],
         "rotation_strategy": "round_robin"
     },
-    "groq/llama-3.1-70b-versatile": {
-        "keys": ["gsk-key1"]
+    "groq": {
+        "models": ["llama-3.1-8b"],
+        "keys": ["your-groq-key"]
     }
 }
 
-with open("demo_config.json", "w") as f:
-    json.dump(config, f, indent=2)
+print("Initializing with multiple providers...")
+client = LLMClient(config=config)
+print(f"Configured models: {client.models()}")
 
-print("Created demo_config.json")
-
-# Initialize with config file
-client = LLMClient("demo_config.json")
-
-print("\n--- Testing Cerebras (should rotate keys) ---")
+# When multiple models are configured, specify which one to use
+print("\n--- Testing Cerebras ---")
 try:
-    # This might fail with invalid keys, but shows the usage
-    client.completion(
-        model="cerebras/llama3.1-70b",
-        messages=[{"role": "user", "content": "Hi"}]
+    response = client.completion(
+        [{"role": "user", "content": "Hello!"}],
+        model="cerebras/llama3.1-8b"
     )
+    print(f"Response: {response['choices'][0]['message']['content'][:50]}")
 except Exception as e:
-    print(f"Request failed (expected with fake keys): {e}")
+    print(f"Error: {e}")
 
 print("\n--- Testing Groq ---")
 try:
-    client.completion(
-        model="groq/llama-3.1-70b-versatile",
-        messages=[{"role": "user", "content": "Hi"}]
+    response = client.completion(
+        [{"role": "user", "content": "Hello!"}],
+        model="groq/llama-3.1-8b"
     )
+    print(f"Response: {response['choices'][0]['message']['content'][:50]}")
 except Exception as e:
-    print(f"Request failed (expected with fake keys): {e}")
+    print(f"Error: {e}")

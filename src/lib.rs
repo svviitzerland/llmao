@@ -118,6 +118,16 @@ impl LlmClient {
             .ok_or_else(|| LlmaoError::ProviderNotFound(name.to_string()))
     }
 
+    /// Get the default model (first configured model)
+    pub fn get_default_model(&self) -> Option<String> {
+        self.model_configs.keys().next().cloned()
+    }
+
+    /// Get all configured models
+    pub fn get_configured_models(&self) -> Vec<String> {
+        self.model_configs.keys().cloned().collect()
+    }
+
     /// Get an API key for a provider
     fn get_api_key(&self, provider: &str) -> Result<String> {
         if let Some(pool) = self.key_pools.get(provider) {
@@ -273,11 +283,11 @@ impl PyLlmClient {
         let _ = dotenvy::dotenv();
 
         let inner = if let Some(conf_dict) = config {
-             // Load from dictionary
+            // Load from dictionary
             let json_val = python_to_json(conf_dict.as_any())?;
             let providers_config: config::ProvidersConfig = serde_json::from_value(json_val)
                 .map_err(|e| LlmaoError::Config(format!("Invalid config dict: {}", e)))?;
-            
+
             let loader = ConfigLoader::from_config(providers_config)?;
             LlmClient::from_loader(loader)?
         } else if let Some(path) = config_path {
@@ -297,22 +307,31 @@ impl PyLlmClient {
 
     /// Make a completion request
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (model, messages, temperature=None, max_tokens=None, stream=None, **kwargs))]
+    #[pyo3(signature = (messages, model=None, temperature=None, max_tokens=None, stream=None, **kwargs))]
     fn completion(
         &self,
         py: Python<'_>,
-        model: &str,
         messages: &Bound<'_, PyList>,
+        model: Option<&str>,
         temperature: Option<f32>,
         max_tokens: Option<u32>,
         stream: Option<bool>,
         kwargs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<Py<PyAny>> {
+        // Resolve model: use provided or get default from config
+        let model_str = if let Some(m) = model {
+            m.to_string()
+        } else {
+            self.inner.get_default_model().ok_or_else(|| {
+                LlmaoError::Config("No model specified and no models configured. Either pass model parameter or add models to config.".to_string())
+            })?
+        };
+
         // Convert Python messages to Rust
         let rust_messages = convert_messages(messages)?;
 
         // Build request
-        let mut request = CompletionRequest::new(model.to_string(), rust_messages);
+        let mut request = CompletionRequest::new(model_str.clone(), rust_messages);
 
         if let Some(temp) = temperature {
             request.temperature = Some(temp);
@@ -335,11 +354,10 @@ impl PyLlmClient {
 
         // Run async completion
         let client = self.inner.clone();
-        let model = model.to_string();
 
         let response = self
             .runtime
-            .block_on(async move { client.completion(&model, request).await })?;
+            .block_on(async move { client.completion(&model_str, request).await })?;
 
         // Convert response to Python dict
         let dict = PyDict::new(py);
@@ -413,6 +431,11 @@ impl PyLlmClient {
     /// List available providers
     fn providers(&self) -> Vec<String> {
         self.inner.providers()
+    }
+
+    /// List configured models
+    fn models(&self) -> Vec<String> {
+        self.inner.get_configured_models()
     }
 
     /// Get info about a provider
@@ -561,17 +584,17 @@ fn python_to_json(obj: &Bound<'_, pyo3::PyAny>) -> PyResult<serde_json::Value> {
 
 /// Convenience function for quick completions
 #[pyfunction]
-#[pyo3(signature = (model, messages, temperature=None, max_tokens=None, **kwargs))]
+#[pyo3(signature = (messages, model=None, temperature=None, max_tokens=None, **kwargs))]
 fn completion(
     py: Python<'_>,
-    model: &str,
     messages: &Bound<'_, PyList>,
+    model: Option<&str>,
     temperature: Option<f32>,
     max_tokens: Option<u32>,
     kwargs: Option<&Bound<'_, PyDict>>,
 ) -> PyResult<Py<PyAny>> {
     let client = PyLlmClient::new(None, None)?;
-    client.completion(py, model, messages, temperature, max_tokens, None, kwargs)
+    client.completion(py, messages, model, temperature, max_tokens, None, kwargs)
 }
 
 /// Python module definition
