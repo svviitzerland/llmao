@@ -104,12 +104,8 @@ impl HttpClient {
                     let status = resp.status();
 
                     // Update rate limit info from headers
-                    self.rate_limiter.update_from_response(
-                        provider,
-                        resp.headers(),
-                        None,
-                        None,
-                    );
+                    self.rate_limiter
+                        .update_from_response(provider, resp.headers(), None, None);
 
                     if status.is_success() {
                         let body = resp.text().await?;
@@ -264,4 +260,3 @@ mod tests {
         assert!(client.is_ok());
     }
 }
-

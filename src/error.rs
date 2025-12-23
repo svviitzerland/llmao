@@ -52,14 +52,25 @@ impl fmt::Display for LlmaoError {
             LlmaoError::Config(msg) => write!(f, "Configuration error: {}", msg),
             LlmaoError::ProviderNotFound(name) => write!(f, "Provider not found: {}", name),
             LlmaoError::ModelNotSupported { provider, model } => {
-                write!(f, "Model '{}' not supported by provider '{}'", model, provider)
+                write!(
+                    f,
+                    "Model '{}' not supported by provider '{}'",
+                    model, provider
+                )
             }
             LlmaoError::NoKeysAvailable(provider) => {
                 write!(f, "No API keys available for provider '{}'", provider)
             }
-            LlmaoError::RateLimited { provider, retry_after } => {
+            LlmaoError::RateLimited {
+                provider,
+                retry_after,
+            } => {
                 if let Some(seconds) = retry_after {
-                    write!(f, "Rate limited by '{}', retry after {} seconds", provider, seconds)
+                    write!(
+                        f,
+                        "Rate limited by '{}', retry after {} seconds",
+                        provider, seconds
+                    )
                 } else {
                     write!(f, "Rate limited by '{}'", provider)
                 }
@@ -111,7 +122,10 @@ impl From<LlmaoError> for PyErr {
                 PyValueError::new_err(format!("Model '{}' not supported by '{}'", model, provider))
             }
             LlmaoError::NoKeysAvailable(msg) => PyRuntimeError::new_err(msg),
-            LlmaoError::RateLimited { provider, retry_after } => {
+            LlmaoError::RateLimited {
+                provider,
+                retry_after,
+            } => {
                 let msg = if let Some(s) = retry_after {
                     format!("Rate limited by '{}', retry after {}s", provider, s)
                 } else {

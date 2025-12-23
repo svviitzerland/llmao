@@ -196,7 +196,10 @@ mod tests {
         assert_eq!(config.base_url, "https://api.example.com/v1");
         assert_eq!(config.api_key_env, Some("EXAMPLE_API_KEY".to_string()));
         assert_eq!(config.models.len(), 2);
-        assert_eq!(config.param_mappings.get("max_completion_tokens"), Some(&"max_tokens".to_string()));
+        assert_eq!(
+            config.param_mappings.get("max_completion_tokens"),
+            Some(&"max_tokens".to_string())
+        );
     }
 
     #[test]
@@ -207,9 +210,12 @@ mod tests {
             api_keys_env: None,
             api_base_env: None,
             models: vec![],
-            param_mappings: [("max_completion_tokens".to_string(), "max_tokens".to_string())]
-                .into_iter()
-                .collect(),
+            param_mappings: [(
+                "max_completion_tokens".to_string(),
+                "max_tokens".to_string(),
+            )]
+            .into_iter()
+            .collect(),
             headers: HashMap::new(),
             rate_limit: None,
             special_handling: SpecialHandling::default(),

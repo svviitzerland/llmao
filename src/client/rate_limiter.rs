@@ -15,7 +15,7 @@ pub struct RateLimitTracker {
 }
 
 /// Rate limit info for a single provider
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ProviderRateLimit {
     /// Remaining requests in current window
     pub requests_remaining: Option<u32>,
@@ -28,17 +28,6 @@ pub struct ProviderRateLimit {
 
     /// Last known retry-after duration
     pub retry_after: Option<Duration>,
-}
-
-impl Default for ProviderRateLimit {
-    fn default() -> Self {
-        Self {
-            requests_remaining: None,
-            tokens_remaining: None,
-            reset_at: None,
-            retry_after: None,
-        }
-    }
 }
 
 impl RateLimitTracker {
@@ -180,8 +169,8 @@ fn parse_duration_string(s: &str) -> Option<Duration> {
     let s = s.trim();
 
     // Handle milliseconds first
-    if s.ends_with("ms") {
-        return s[..s.len() - 2].parse::<u64>().ok().map(Duration::from_millis);
+    if let Some(stripped) = s.strip_suffix("ms") {
+        return stripped.parse::<u64>().ok().map(Duration::from_millis);
     }
 
     // Try complex format first (e.g., "1m30s", "2h30m")
@@ -211,14 +200,20 @@ fn parse_duration_string(s: &str) -> Option<Duration> {
     }
 
     // Simple cases - single unit
-    if s.ends_with('s') {
-        return s[..s.len() - 1].parse::<f64>().ok().map(Duration::from_secs_f64);
+    if let Some(stripped) = s.strip_suffix('s') {
+        return stripped.parse::<f64>().ok().map(Duration::from_secs_f64);
     }
-    if s.ends_with('m') {
-        return s[..s.len() - 1].parse::<u64>().ok().map(|mins| Duration::from_secs(mins * 60));
+    if let Some(stripped) = s.strip_suffix('m') {
+        return stripped
+            .parse::<u64>()
+            .ok()
+            .map(|mins| Duration::from_secs(mins * 60));
     }
-    if s.ends_with('h') {
-        return s[..s.len() - 1].parse::<u64>().ok().map(|hours| Duration::from_secs(hours * 3600));
+    if let Some(stripped) = s.strip_suffix('h') {
+        return stripped
+            .parse::<u64>()
+            .ok()
+            .map(|hours| Duration::from_secs(hours * 3600));
     }
 
     None
@@ -233,17 +228,32 @@ mod tests {
         assert_eq!(parse_duration_string("30s"), Some(Duration::from_secs(30)));
         assert_eq!(parse_duration_string("5m"), Some(Duration::from_secs(300)));
         assert_eq!(parse_duration_string("1h"), Some(Duration::from_secs(3600)));
-        assert_eq!(parse_duration_string("1m30s"), Some(Duration::from_secs(90)));
-        assert_eq!(parse_duration_string("500ms"), Some(Duration::from_millis(500)));
+        assert_eq!(
+            parse_duration_string("1m30s"),
+            Some(Duration::from_secs(90))
+        );
+        assert_eq!(
+            parse_duration_string("500ms"),
+            Some(Duration::from_millis(500))
+        );
     }
 
     #[test]
     fn test_is_rate_limit_error() {
         assert!(RateLimitTracker::is_rate_limit_error(429, ""));
-        assert!(RateLimitTracker::is_rate_limit_error(400, "rate limit exceeded"));
-        assert!(RateLimitTracker::is_rate_limit_error(403, "Too Many Requests"));
+        assert!(RateLimitTracker::is_rate_limit_error(
+            400,
+            "rate limit exceeded"
+        ));
+        assert!(RateLimitTracker::is_rate_limit_error(
+            403,
+            "Too Many Requests"
+        ));
         assert!(!RateLimitTracker::is_rate_limit_error(200, "success"));
-        assert!(!RateLimitTracker::is_rate_limit_error(500, "internal error"));
+        assert!(!RateLimitTracker::is_rate_limit_error(
+            500,
+            "internal error"
+        ));
     }
 
     #[test]

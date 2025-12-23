@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Python bindings
-pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+pyo3 = { version = "0.27", features = ["extension-module", "abi3-py39"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

@@ -99,9 +99,8 @@ impl ConfigLoader {
     /// Load configuration from a specific file
     fn load_from_file(&mut self, path: impl AsRef<Path>) -> Result<()> {
         let path = path.as_ref();
-        let content = std::fs::read_to_string(path).map_err(|e| {
-            LlmaoError::Config(format!("Failed to read {}: {}", path.display(), e))
-        })?;
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| LlmaoError::Config(format!("Failed to read {}: {}", path.display(), e)))?;
 
         let config: ProvidersConfig = serde_json::from_str(&content).map_err(|e| {
             LlmaoError::Config(format!("Failed to parse {}: {}", path.display(), e))

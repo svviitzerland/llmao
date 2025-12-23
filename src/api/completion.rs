@@ -215,10 +215,11 @@ impl CompletionRequest {
     /// Add empty text to assistant messages with tool calls (for some providers)
     pub fn add_text_to_tool_calls(&mut self) {
         for message in &mut self.messages {
-            if message.role == "assistant" && message.tool_calls.is_some() {
-                if message.content.is_empty() {
-                    message.content = MessageContent::Text(" ".to_string());
-                }
+            if message.role == "assistant"
+                && message.tool_calls.is_some()
+                && message.content.is_empty()
+            {
+                message.content = MessageContent::Text(" ".to_string());
             }
         }
     }
@@ -258,7 +259,10 @@ pub enum ToolChoice {
     Mode(String),
 
     /// Specific function
-    Function { r#type: String, function: ToolChoiceFunction },
+    Function {
+        r#type: String,
+        function: ToolChoiceFunction,
+    },
 }
 
 /// Specific function for tool choice
@@ -320,12 +324,16 @@ pub struct Usage {
 impl CompletionResponse {
     /// Get the first message content
     pub fn content(&self) -> Option<String> {
-        self.choices.first().map(|c| c.message.content.to_string_content())
+        self.choices
+            .first()
+            .map(|c| c.message.content.to_string_content())
     }
 
     /// Get tool calls from the first choice
     pub fn tool_calls(&self) -> Option<&Vec<ToolCall>> {
-        self.choices.first().and_then(|c| c.message.tool_calls.as_ref())
+        self.choices
+            .first()
+            .and_then(|c| c.message.tool_calls.as_ref())
     }
 }
 
@@ -343,8 +351,12 @@ mod tests {
     #[test]
     fn test_message_content_parts() {
         let content = MessageContent::Parts(vec![
-            ContentPart::Text { text: "Hello ".to_string() },
-            ContentPart::Text { text: "World".to_string() },
+            ContentPart::Text {
+                text: "Hello ".to_string(),
+            },
+            ContentPart::Text {
+                text: "World".to_string(),
+            },
         ]);
         assert_eq!(content.to_string_content(), "Hello World");
     }

@@ -9,4 +9,4 @@ pub use completion::{
     Choice, CompletionRequest, CompletionResponse, ContentPart, FunctionCall, FunctionDefinition,
     ImageUrl, Message, MessageContent, Tool, ToolCall, ToolChoice, Usage,
 };
-pub use streaming::{parse_sse_line, StreamAccumulator, StreamChunk, StreamChoice, StreamDelta};
+pub use streaming::{parse_sse_line, StreamAccumulator, StreamChoice, StreamChunk, StreamDelta};

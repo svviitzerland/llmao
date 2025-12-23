@@ -121,7 +121,11 @@ impl LlmClient {
     }
 
     /// Make a completion request
-    pub async fn completion(&self, model: &str, request: CompletionRequest) -> Result<CompletionResponse> {
+    pub async fn completion(
+        &self,
+        model: &str,
+        request: CompletionRequest,
+    ) -> Result<CompletionResponse> {
         let route = ModelRoute::parse(model)?;
         let provider_config = self.get_provider(&route.provider)?;
 
@@ -130,7 +134,10 @@ impl LlmClient {
 
         // Set the actual model name
         if let Some(obj) = body.as_object_mut() {
-            obj.insert("model".to_string(), serde_json::Value::String(route.model_id()));
+            obj.insert(
+                "model".to_string(),
+                serde_json::Value::String(route.model_id()),
+            );
         }
 
         // Apply parameter mappings
@@ -157,7 +164,11 @@ impl LlmClient {
         };
 
         // Try with key rotation on rate limit
-        let max_attempts = self.key_pools.get(&route.provider).map(|p| p.len()).unwrap_or(1);
+        let max_attempts = self
+            .key_pools
+            .get(&route.provider)
+            .map(|p| p.len())
+            .unwrap_or(1);
         let mut last_error = None;
 
         for _ in 0..max_attempts {
@@ -179,7 +190,7 @@ impl LlmClient {
                 Err(LlmaoError::RateLimited { retry_after, .. }) => {
                     // Mark this key as rate limited and try next
                     let duration = retry_after
-                        .map(|s| std::time::Duration::from_secs(s))
+                        .map(std::time::Duration::from_secs)
                         .unwrap_or(std::time::Duration::from_secs(60));
                     self.mark_key_rate_limited(&route.provider, &api_key, duration);
                     last_error = Some(LlmaoError::RateLimited {
@@ -191,7 +202,7 @@ impl LlmClient {
             }
         }
 
-        Err(last_error.unwrap_or_else(|| LlmaoError::NoKeysAvailable(route.provider)))
+        Err(last_error.unwrap_or(LlmaoError::NoKeysAvailable(route.provider)))
     }
 
     /// List available providers
@@ -255,6 +266,7 @@ impl PyLlmClient {
     }
 
     /// Make a completion request
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (model, messages, temperature=None, max_tokens=None, stream=None, **kwargs))]
     fn completion(
         &self,
@@ -265,7 +277,7 @@ impl PyLlmClient {
         max_tokens: Option<u32>,
         stream: Option<bool>,
         kwargs: Option<&Bound<'_, PyDict>>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         // Convert Python messages to Rust
         let rust_messages = convert_messages(messages)?;
 
@@ -295,25 +307,25 @@ impl PyLlmClient {
         let client = self.inner.clone();
         let model = model.to_string();
 
-        let response = self.runtime.block_on(async move {
-            client.completion(&model, request).await
-        })?;
+        let response = self
+            .runtime
+            .block_on(async move { client.completion(&model, request).await })?;
 
         // Convert response to Python dict
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
         dict.set_item("id", &response.id)?;
         dict.set_item("object", &response.object)?;
         dict.set_item("created", response.created)?;
         dict.set_item("model", &response.model)?;
 
         // Convert choices
-        let choices = PyList::empty_bound(py);
+        let choices = PyList::empty(py);
         for choice in &response.choices {
-            let choice_dict = PyDict::new_bound(py);
+            let choice_dict = PyDict::new(py);
             choice_dict.set_item("index", choice.index)?;
             choice_dict.set_item("finish_reason", &choice.finish_reason)?;
 
-            let message_dict = PyDict::new_bound(py);
+            let message_dict = PyDict::new(py);
             message_dict.set_item("role", &choice.message.role)?;
             message_dict.set_item("content", choice.message.content.to_string_content())?;
             choice_dict.set_item("message", message_dict)?;
@@ -324,7 +336,7 @@ impl PyLlmClient {
 
         // Convert usage
         if let Some(usage) = &response.usage {
-            let usage_dict = PyDict::new_bound(py);
+            let usage_dict = PyDict::new(py);
             usage_dict.set_item("prompt_tokens", usage.prompt_tokens)?;
             usage_dict.set_item("completion_tokens", usage.completion_tokens)?;
             usage_dict.set_item("total_tokens", usage.total_tokens)?;
@@ -340,10 +352,10 @@ impl PyLlmClient {
     }
 
     /// Get info about a provider
-    fn provider_info(&self, py: Python<'_>, name: &str) -> PyResult<Option<PyObject>> {
+    fn provider_info(&self, py: Python<'_>, name: &str) -> PyResult<Option<Py<PyAny>>> {
         match self.inner.provider_info(name) {
             Some(info) => {
-                let dict = PyDict::new_bound(py);
+                let dict = PyDict::new(py);
                 dict.set_item("name", &info.name)?;
                 dict.set_item("base_url", &info.base_url)?;
                 dict.set_item("models", &info.models)?;
@@ -360,7 +372,7 @@ fn convert_messages(messages: &Bound<'_, PyList>) -> PyResult<Vec<Message>> {
     let mut result = Vec::new();
 
     for item in messages.iter() {
-        let dict = item.downcast::<PyDict>()?;
+        let dict: &Bound<'_, PyDict> = item.cast()?;
 
         let role: String = dict
             .get_item("role")?
@@ -378,9 +390,7 @@ fn convert_messages(messages: &Bound<'_, PyList>) -> PyResult<Vec<Message>> {
             MessageContent::Text(String::new())
         };
 
-        let name: Option<String> = dict
-            .get_item("name")?
-            .and_then(|v| v.extract().ok());
+        let name: Option<String> = dict.get_item("name")?.and_then(|v| v.extract().ok());
 
         let tool_call_id: Option<String> = dict
             .get_item("tool_call_id")?
@@ -410,10 +420,11 @@ fn python_to_json(obj: &Bound<'_, pyo3::PyAny>) -> PyResult<serde_json::Value> {
         Ok(serde_json::json!(f))
     } else if let Ok(s) = obj.extract::<String>() {
         Ok(serde_json::Value::String(s))
-    } else if let Ok(list) = obj.downcast::<PyList>() {
-        let vec: std::result::Result<Vec<_>, _> = list.iter().map(|item| python_to_json(&item)).collect();
+    } else if let Ok(list) = obj.cast::<PyList>() {
+        let vec: std::result::Result<Vec<_>, _> =
+            list.iter().map(|item| python_to_json(&item)).collect();
         Ok(serde_json::Value::Array(vec?))
-    } else if let Ok(dict) = obj.downcast::<PyDict>() {
+    } else if let Ok(dict) = obj.cast::<PyDict>() {
         let mut map = serde_json::Map::new();
         for (key, value) in dict.iter() {
             let key_str: String = key.extract()?;
@@ -436,7 +447,7 @@ fn completion(
     temperature: Option<f32>,
     max_tokens: Option<u32>,
     kwargs: Option<&Bound<'_, PyDict>>,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     let client = PyLlmClient::new(None)?;
     client.completion(py, model, messages, temperature, max_tokens, None, kwargs)
 }
