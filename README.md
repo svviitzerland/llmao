@@ -6,31 +6,19 @@
 
 **Lightweight LLM API Orchestrator**
 
-*Like litellm, but written in Rust. Because life's too short for slow API calls.*
+*One interface for all your LLM APIs, fast and simple*
 
 [![PyPI](https://img.shields.io/pypi/v/llmao?style=flat&logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/llmao/)
-[![Python](https://img.shields.io/pypi/pyversions/llmao?style=flat&logo=python&logoColor=white)](https://pypi.org/project/llmao/)
+[![Python](https://img.shields.io/badge/python-3.9+-blue?style=flat&logo=python&logoColor=white)](https://pypi.org/project/llmao/)
 [![Rust](https://img.shields.io/badge/Built%20with-Rust-dea584?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/github/license/svviitzerland/llmao?style=flat)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/svviitzerland/llmao/ci.yml?style=flat&logo=github&label=CI)](https://github.com/svviitzerland/llmao/actions)
-
----
-
-**20+ Providers** | **Auto Key Rotation** | **Rate Limit Handling** | **Blazingly Fast**
 
 </div>
 
 ---
 
-## Why LLMAO?
-
-| Feature | LLMAO | litellm |
-|---------|-------|---------|
-| Core Language | Rust | Python |
-| Startup Time | ~5ms | ~500ms |
-| Memory Usage | Low | Higher |
-| Key Rotation | Built-in | Manual |
-| Rate Limiting | Automatic | Limited |
+A unified Python interface for multiple LLM providers with automatic key rotation and rate limit handling. Built with Rust core for performance.
 
 ## Installation
 
@@ -69,8 +57,6 @@ client.completion(model="groq/llama-3.3-70b-versatile", messages=[...])
 
 # Cerebras
 client.completion(model="cerebras/llama3.1-70b", messages=[...])
-
-# And 20+ more providers...
 ```
 
 ## Supported Providers
@@ -107,31 +93,23 @@ client.completion(model="cerebras/llama3.1-70b", messages=[...])
 
 ## Key Rotation
 
-Automatic failover when rate limited:
+Automatic failover when rate limited. Set multiple keys via environment variables:
 
-```python
-# Set multiple keys
+```bash
 export OPENAI_API_KEY="sk-key1"
 export OPENAI_API_KEY_2="sk-key2"
 export OPENAI_API_KEY_3="sk-key3"
 ```
 
-```json
-{
-  "key_pools": {
-    "openai": {
-      "keys_env": ["OPENAI_API_KEY", "OPENAI_API_KEY_2", "OPENAI_API_KEY_3"],
-      "rotation_strategy": "round_robin"
-    }
-  }
-}
-```
+Configure rotation strategy in your `config.json`:
 
-Strategies: `round_robin`, `least_recently_used`, `random`
+- `round_robin` - Rotate through keys sequentially
+- `least_recently_used` - Use the key that was used longest ago  
+- `random` - Pick a random key
 
-## Custom Providers
+## Configuration
 
-Create `providers.json` in your project:
+Create a `config.json` or `config.yml` in your project to customize settings:
 
 ```json
 {
@@ -140,6 +118,43 @@ Create `providers.json` in your project:
       "base_url": "https://api.my-provider.com/v1",
       "api_key_env": "MY_PROVIDER_API_KEY"
     }
+  },
+  "key_pools": {
+    "openai": {
+      "keys_env": ["OPENAI_API_KEY", "OPENAI_API_KEY_2"],
+      "rotation_strategy": "round_robin"
+    }
+  }
+}
+```
+
+Or use YAML format:
+
+```yaml
+providers:
+  my_provider:
+    base_url: https://api.my-provider.com/v1
+    api_key_env: MY_PROVIDER_API_KEY
+
+key_pools:
+  openai:
+    keys_env:
+      - OPENAI_API_KEY
+      - OPENAI_API_KEY_2
+    rotation_strategy: round_robin
+```
+
+## Contributing Providers
+
+Want to add a new provider to LLMAO? Fork the repository, add your provider to `provider.json`, and submit a pull request.
+
+The `provider.json` file in the repository contains the built-in provider definitions. Your contribution will be available to all users after merging.
+
+```json
+{
+  "your_provider": {
+    "base_url": "https://api.yourprovider.com/v1",
+    "api_key_env": "YOUR_PROVIDER_API_KEY"
   }
 }
 ```
@@ -150,7 +165,7 @@ Create `providers.json` in your project:
 from llmao import LLMClient, completion
 
 # Client-based
-client = LLMClient(config_path="./providers.json")
+client = LLMClient(config_path="./config.json")
 client.completion(model, messages, temperature=0.7, max_tokens=100)
 client.providers()  # List available providers
 client.provider_info("openai")  # Get provider details
