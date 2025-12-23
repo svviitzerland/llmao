@@ -1,15 +1,36 @@
+<div align="center">
+
+<img src="assets/logo.svg" alt="LLMAO Logo" width="150" height="150" />
+
 # LLMAO
 
-Lightweight LLM API Orchestrator - A fast, multi-provider LLM client with rate limiting and key rotation.
+**Lightweight LLM API Orchestrator**
 
-## Features
+*Like litellm, but written in Rust. Because life's too short for slow API calls.*
 
-- **High Performance**: Core logic written in Rust with Python bindings via PyO3
-- **Multi-Provider Support**: 20+ providers pre-configured (OpenAI, Anthropic, Groq, Cerebras, etc.)
-- **Key Rotation**: Automatic rotation between multiple API keys when rate limited
-- **Rate Limit Handling**: Intelligent detection and handling of rate limits with exponential backoff
-- **Simple API**: Clean `provider/model` routing format
-- **Extensible**: Easy to add new providers via JSON configuration
+[![PyPI](https://img.shields.io/pypi/v/llmao?style=flat&logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/llmao/)
+[![Python](https://img.shields.io/pypi/pyversions/llmao?style=flat&logo=python&logoColor=white)](https://pypi.org/project/llmao/)
+[![Rust](https://img.shields.io/badge/Built%20with-Rust-dea584?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/github/license/svviitzerland/llmao?style=flat)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/svviitzerland/llmao/ci.yml?style=flat&logo=github&label=CI)](https://github.com/svviitzerland/llmao/actions)
+
+---
+
+**20+ Providers** | **Auto Key Rotation** | **Rate Limit Handling** | **Blazingly Fast**
+
+</div>
+
+---
+
+## Why LLMAO?
+
+| Feature | LLMAO | litellm |
+|---------|-------|---------|
+| Core Language | Rust | Python |
+| Startup Time | ~5ms | ~500ms |
+| Memory Usage | Low | Higher |
+| Key Rotation | Built-in | Manual |
+| Rate Limiting | Automatic | Limited |
 
 ## Installation
 
@@ -17,247 +38,139 @@ Lightweight LLM API Orchestrator - A fast, multi-provider LLM client with rate l
 pip install llmao
 ```
 
-Or build from source:
-
-```bash
-# Requires Rust and maturin
-pip install maturin
-maturin develop
-```
-
 ## Quick Start
-
-```python
-from llmao import completion
-
-# Simple completion
-response = completion(
-    model="openai/gpt-4",
-    messages=[{"role": "user", "content": "Hello!"}]
-)
-print(response["choices"][0]["message"]["content"])
-```
-
-## Usage
-
-### Basic Usage
 
 ```python
 from llmao import LLMClient
 
-# Create client (loads .env automatically)
 client = LLMClient()
 
-# Make a completion request
 response = client.completion(
     model="groq/llama-3.1-70b-versatile",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "What is the capital of France?"}
-    ],
-    temperature=0.7,
-    max_tokens=100
+    messages=[{"role": "user", "content": "Hello!"}]
 )
 
 print(response["choices"][0]["message"]["content"])
 ```
 
-### Model Routing Format
+## Model Format
 
-Models are specified in the format `provider/model` or `provider/model/variant`:
+Use `provider/model` routing:
 
 ```python
-# Standard format
+# OpenAI
 client.completion(model="openai/gpt-4o", messages=[...])
+
+# Anthropic
 client.completion(model="anthropic/claude-3-5-sonnet-20241022", messages=[...])
+
+# Groq
 client.completion(model="groq/llama-3.3-70b-versatile", messages=[...])
 
-# With variant (e.g., Azure deployments)
-client.completion(model="azure/gpt-4/my-deployment", messages=[...])
+# Cerebras
+client.completion(model="cerebras/llama3.1-70b", messages=[...])
+
+# And 20+ more providers...
 ```
 
-### Available Providers
+## Supported Providers
 
-List all configured providers:
+<details>
+<summary>View all providers</summary>
+
+| Provider | Environment Variable |
+|----------|---------------------|
+| OpenAI | `OPENAI_API_KEY` |
+| Anthropic | `ANTHROPIC_API_KEY` |
+| Groq | `GROQ_API_KEY` |
+| Cerebras | `CEREBRAS_API_KEY` |
+| Together | `TOGETHER_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| DeepSeek | `DEEPSEEK_API_KEY` |
+| Mistral | `MISTRAL_API_KEY` |
+| Fireworks | `FIREWORKS_API_KEY` |
+| Perplexity | `PERPLEXITY_API_KEY` |
+| SambaNova | `SAMBANOVA_API_KEY` |
+| NVIDIA | `NVIDIA_API_KEY` |
+| Hyperbolic | `HYPERBOLIC_API_KEY` |
+| DeepInfra | `DEEPINFRA_API_KEY` |
+| Novita | `NOVITA_API_KEY` |
+| Xiaomi MiMo | `XIAOMI_MIMO_API_KEY` |
+| Venice AI | `VENICE_AI_API_KEY` |
+| GLHF | `GLHF_API_KEY` |
+| Lepton | `LEPTON_API_KEY` |
+| Anyscale | `ANYSCALE_API_KEY` |
+| Ollama | `OLLAMA_API_KEY` |
+| LM Studio | `LMSTUDIO_API_KEY` |
+
+</details>
+
+## Key Rotation
+
+Automatic failover when rate limited:
 
 ```python
-client = LLMClient()
-print(client.providers())
-# ['openai', 'anthropic', 'groq', 'cerebras', 'together', ...]
-
-# Get provider details
-info = client.provider_info("openai")
-print(info)
-# {'name': 'openai', 'base_url': 'https://api.openai.com/v1', 'models': [...], 'has_keys': True}
+# Set multiple keys
+export OPENAI_API_KEY="sk-key1"
+export OPENAI_API_KEY_2="sk-key2"
+export OPENAI_API_KEY_3="sk-key3"
 ```
-
-### Environment Variables
-
-Set API keys via environment variables:
-
-```bash
-export OPENAI_API_KEY="sk-..."
-export GROQ_API_KEY="gsk_..."
-export ANTHROPIC_API_KEY="sk-ant-..."
-```
-
-Or use a `.env` file (automatically loaded):
-
-```
-OPENAI_API_KEY=sk-...
-GROQ_API_KEY=gsk_...
-```
-
-## Configuration
-
-### Custom Providers
-
-Create a `providers.json` or `llmao.json` in your project directory:
 
 ```json
 {
-  "providers": {
-    "my_provider": {
-      "base_url": "https://api.my-provider.com/v1",
-      "api_key_env": "MY_PROVIDER_API_KEY",
-      "models": ["model-a", "model-b"],
-      "param_mappings": {
-        "max_completion_tokens": "max_tokens"
-      }
-    }
-  }
-}
-```
-
-Configuration is loaded from (in order, later overrides earlier):
-1. Built-in defaults
-2. `$LLMAO_PROVIDERS_PATH` environment variable
-3. `./providers.json` or `./llmao.json`
-4. `~/.config/llmao/providers.json`
-5. `~/.llmao/providers.json`
-
-### Multi-Key Support
-
-Configure multiple API keys for automatic rotation:
-
-```json
-{
-  "providers": {
-    "openai": {
-      "base_url": "https://api.openai.com/v1",
-      "api_keys_env": ["OPENAI_API_KEY", "OPENAI_API_KEY_2", "OPENAI_API_KEY_3"]
-    }
-  },
   "key_pools": {
     "openai": {
-      "keys_env": ["OPENAI_API_KEY", "OPENAI_API_KEY_2"],
+      "keys_env": ["OPENAI_API_KEY", "OPENAI_API_KEY_2", "OPENAI_API_KEY_3"],
       "rotation_strategy": "round_robin"
     }
   }
 }
 ```
 
-Rotation strategies:
-- `round_robin` (default): Cycle through keys sequentially
-- `least_recently_used`: Use the key that hasn't been used longest
-- `random`: Random selection
+Strategies: `round_robin`, `least_recently_used`, `random`
 
-### Provider-Specific Options
+## Custom Providers
+
+Create `providers.json` in your project:
 
 ```json
 {
   "providers": {
-    "example": {
-      "base_url": "https://api.example.com/v1",
-      "api_key_env": "EXAMPLE_API_KEY",
-      "headers": {
-        "X-Custom-Header": "value"
-      },
-      "param_mappings": {
-        "max_completion_tokens": "max_tokens"
-      },
-      "special_handling": {
-        "convert_content_list_to_string": true,
-        "add_text_to_tool_calls": true
-      },
-      "rate_limit": {
-        "requests_per_minute": 60,
-        "retry_after_header": "retry-after"
-      }
+    "my_provider": {
+      "base_url": "https://api.my-provider.com/v1",
+      "api_key_env": "MY_PROVIDER_API_KEY"
     }
   }
 }
 ```
 
-## Rate Limiting
-
-LLMAO automatically handles rate limits:
-
-1. **Detection**: Recognizes HTTP 429 and rate limit error messages
-2. **Key Rotation**: When rate limited, automatically switches to another key
-3. **Backoff**: Exponential backoff with jitter for retries
-4. **Header Parsing**: Respects `retry-after` and `x-ratelimit-*` headers
+## API Reference
 
 ```python
-# With multiple keys configured, LLMAO will:
-# 1. Use first available key
-# 2. If rate limited, mark key and try next
-# 3. Continue until success or all keys exhausted
-response = client.completion(model="openai/gpt-4", messages=[...])
-```
+from llmao import LLMClient, completion
 
-## Error Handling
+# Client-based
+client = LLMClient(config_path="./providers.json")
+client.completion(model, messages, temperature=0.7, max_tokens=100)
+client.providers()  # List available providers
+client.provider_info("openai")  # Get provider details
 
-```python
-from llmao import LLMClient
-
-client = LLMClient()
-
-try:
-    response = client.completion(
-        model="openai/gpt-4",
-        messages=[{"role": "user", "content": "Hello"}]
-    )
-except ValueError as e:
-    # Invalid model format or provider not found
-    print(f"Configuration error: {e}")
-except RuntimeError as e:
-    # Rate limited, auth failed, or no keys available
-    print(f"Runtime error: {e}")
-except ConnectionError as e:
-    # Network or timeout error
-    print(f"Connection error: {e}")
+# Quick function
+completion(model, messages, **kwargs)
 ```
 
 ## Development
 
-### Building from Source
-
 ```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Install maturin
+# Build from source
 pip install maturin
-
-# Development build
 maturin develop
 
-# Release build
-maturin build --release
-```
-
-### Running Tests
-
-```bash
-# Rust tests
+# Run tests
 cargo test
-
-# Python tests
-pip install pytest pytest-asyncio
-pytest tests/python/
 ```
 
 ## License
 
-MIT License
+MIT
+

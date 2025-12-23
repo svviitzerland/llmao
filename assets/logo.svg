@@ -1,0 +1,19 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Circular Background (optional, remove fill for transparent) -->
+  <circle cx="100" cy="100" r="90" fill="#2C3E50" fill-opacity="0.05"/>
+  
+  <!-- Cow Head Shape -->
+  <path d="M50 70 C 40 40, 70 40, 75 55 C 80 40, 120 40, 125 55 C 130 40, 160 40, 150 70 L 140 130 C 140 150, 60 150, 60 130 Z" fill="#2d2d2d"/>
+
+  <!-- Lightning Bolt (The "Flash" element) -->
+  <path d="M110 30 L 85 90 L 105 90 L 90 150 L 135 80 L 115 80 L 130 30 Z" fill="#DEA584" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+  
+  <!-- Eyes -->
+  <circle cx="75" cy="90" r="5" fill="white"/>
+  <circle cx="125" cy="90" r="5" fill="white"/>
+  
+  <!-- Snout -->
+  <ellipse cx="100" cy="130" rx="20" ry="10" fill="#DEA584" fill-opacity="0.3"/>
+  <circle cx="92" cy="130" r="2" fill="#2d2d2d"/>
+  <circle cx="108" cy="130" r="2" fill="#2d2d2d"/>
+</svg>
