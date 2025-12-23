@@ -1,0 +1,124 @@
+{
+    "providers": {
+        "openai": {
+            "base_url": "https://api.openai.com/v1",
+            "api_key_env": "OPENAI_API_KEY",
+            "rate_limit": {
+                "requests_per_minute": 60,
+                "retry_after_header": "retry-after"
+            }
+        },
+        "anthropic": {
+            "base_url": "https://api.anthropic.com/v1",
+            "api_key_env": "ANTHROPIC_API_KEY",
+            "headers": {
+                "anthropic-version": "2023-06-01"
+            }
+        },
+        "groq": {
+            "base_url": "https://api.groq.com/openai/v1",
+            "api_key_env": "GROQ_API_KEY",
+            "rate_limit": {
+                "requests_per_minute": 30
+            }
+        },
+        "cerebras": {
+            "base_url": "https://api.cerebras.ai/v1",
+            "api_key_env": "CEREBRAS_API_KEY"
+        },
+        "together": {
+            "base_url": "https://api.together.xyz/v1",
+            "api_key_env": "TOGETHER_API_KEY"
+        },
+        "openrouter": {
+            "base_url": "https://openrouter.ai/api/v1",
+            "api_key_env": "OPENROUTER_API_KEY"
+        },
+        "deepseek": {
+            "base_url": "https://api.deepseek.com/v1",
+            "api_key_env": "DEEPSEEK_API_KEY"
+        },
+        "mistral": {
+            "base_url": "https://api.mistral.ai/v1",
+            "api_key_env": "MISTRAL_API_KEY"
+        },
+        "fireworks": {
+            "base_url": "https://api.fireworks.ai/inference/v1",
+            "api_key_env": "FIREWORKS_API_KEY"
+        },
+        "perplexity": {
+            "base_url": "https://api.perplexity.ai",
+            "api_key_env": "PERPLEXITY_API_KEY"
+        },
+        "sambanova": {
+            "base_url": "https://api.sambanova.ai/v1",
+            "api_key_env": "SAMBANOVA_API_KEY"
+        },
+        "nvidia": {
+            "base_url": "https://integrate.api.nvidia.com/v1",
+            "api_key_env": "NVIDIA_API_KEY"
+        },
+        "hyperbolic": {
+            "base_url": "https://api.hyperbolic.xyz/v1",
+            "api_key_env": "HYPERBOLIC_API_KEY"
+        },
+        "novita": {
+            "base_url": "https://api.novita.ai/v3/openai",
+            "api_key_env": "NOVITA_API_KEY"
+        },
+        "publicai": {
+            "base_url": "https://api.publicai.co/v1",
+            "api_key_env": "PUBLICAI_API_KEY",
+            "api_base_env": "PUBLICAI_API_BASE",
+            "param_mappings": {
+                "max_completion_tokens": "max_tokens"
+            },
+            "special_handling": {
+                "convert_content_list_to_string": true
+            }
+        },
+        "helicone": {
+            "base_url": "https://ai-gateway.helicone.ai/",
+            "api_key_env": "HELICONE_API_KEY"
+        },
+        "veniceai": {
+            "base_url": "https://api.venice.ai/api/v1",
+            "api_key_env": "VENICE_AI_API_KEY"
+        },
+        "xiaomi_mimo": {
+            "base_url": "https://api.xiaomimimo.com/v1",
+            "api_key_env": "XIAOMI_MIMO_API_KEY",
+            "param_mappings": {
+                "max_completion_tokens": "max_tokens"
+            },
+            "special_handling": {
+                "add_text_to_tool_calls": true
+            }
+        },
+        "glhf": {
+            "base_url": "https://glhf.chat/api/openai/v1",
+            "api_key_env": "GLHF_API_KEY"
+        },
+        "lepton": {
+            "base_url": "https://llama3-1-405b.lepton.run/api/v1",
+            "api_key_env": "LEPTON_API_KEY"
+        },
+        "anyscale": {
+            "base_url": "https://api.endpoints.anyscale.com/v1",
+            "api_key_env": "ANYSCALE_API_KEY"
+        },
+        "deepinfra": {
+            "base_url": "https://api.deepinfra.com/v1/openai",
+            "api_key_env": "DEEPINFRA_API_KEY"
+        },
+        "ollama": {
+            "base_url": "http://localhost:11434/v1",
+            "api_key_env": "OLLAMA_API_KEY"
+        },
+        "lmstudio": {
+            "base_url": "http://localhost:1234/v1",
+            "api_key_env": "LMSTUDIO_API_KEY"
+        }
+    },
+    "key_pools": {}
+}
