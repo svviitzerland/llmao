@@ -24,7 +24,7 @@ use router::{KeyPool, ModelRoute};
 pub struct LlmClient {
     /// Provider registry (metadata from providers.json)
     provider_registry: config::ProviderRegistry,
-    
+
     /// Expanded model configurations (provider/model -> config)
     #[allow(dead_code)] // Will be used for model-specific configuration lookups
     model_configs: HashMap<String, config::ModelConfig>,
@@ -53,7 +53,7 @@ impl LlmClient {
     fn from_loader(loader: ConfigLoader) -> Result<Self> {
         let provider_registry = loader.provider_registry().clone();
         let user_config = loader.config().clone();
-        
+
         // Expand user config into individual model configurations
         let mut model_configs = HashMap::new();
         let mut key_pools = HashMap::new();
@@ -64,7 +64,7 @@ impl LlmClient {
                 // Specific model: "provider/model"
                 let parts: Vec<&str> = key.splitn(2, '/').collect();
                 let provider_name = parts[0];
-                
+
                 // Create key pool for this provider if not exists
                 if !key_pools.contains_key(provider_name) && !model_config.keys.is_empty() {
                     key_pools.insert(
@@ -76,13 +76,13 @@ impl LlmClient {
                         ),
                     );
                 }
-                
+
                 // Store model config
                 model_configs.insert(key.clone(), model_config);
             } else {
                 // Provider-level: expand to multiple models
                 let provider_name = &key;
-                
+
                 // Create key pool for this provider
                 if !model_config.keys.is_empty() {
                     key_pools.insert(
@@ -94,7 +94,7 @@ impl LlmClient {
                         ),
                     );
                 }
-                
+
                 // Expand each model
                 for model_name in &model_config.models {
                     let model_key = format!("{}/{}", provider_name, model_name);
@@ -425,6 +425,8 @@ impl PyLlmClient {
 
 /// Convert Python list of message dicts to Rust Messages
 fn convert_messages(messages: &Bound<'_, PyList>) -> PyResult<Vec<Message>> {
+    use api::{FunctionCall, ToolCall};
+
     let mut result = Vec::new();
 
     for item in messages.iter() {
@@ -436,7 +438,9 @@ fn convert_messages(messages: &Bound<'_, PyList>) -> PyResult<Vec<Message>> {
             .extract()?;
 
         let content = if let Some(content_item) = dict.get_item("content")? {
-            if let Ok(s) = content_item.extract::<String>() {
+            if content_item.is_none() {
+                MessageContent::Text(String::new())
+            } else if let Ok(s) = content_item.extract::<String>() {
                 MessageContent::Text(s)
             } else {
                 // TODO: Handle content arrays for multimodal
@@ -452,12 +456,65 @@ fn convert_messages(messages: &Bound<'_, PyList>) -> PyResult<Vec<Message>> {
             .get_item("tool_call_id")?
             .and_then(|v| v.extract().ok());
 
+        // Parse tool_calls if present
+        let tool_calls: Option<Vec<ToolCall>> =
+            if let Some(tc_list) = dict.get_item("tool_calls")? {
+                if tc_list.is_none() {
+                    None
+                } else if let Ok(list) = tc_list.cast::<PyList>() {
+                    let mut calls = Vec::new();
+                    for tc in list.iter() {
+                        if let Ok(tc_dict) = tc.cast::<PyDict>() {
+                            let id: String = tc_dict
+                                .get_item("id")?
+                                .map(|v| v.extract().unwrap_or_default())
+                                .unwrap_or_default();
+
+                            let call_type: String = tc_dict
+                                .get_item("type")?
+                                .map(|v| v.extract().unwrap_or_else(|_| "function".to_string()))
+                                .unwrap_or_else(|| "function".to_string());
+
+                            // Parse function details
+                            if let Some(func_obj) = tc_dict.get_item("function")? {
+                                if let Ok(func_dict) = func_obj.cast::<PyDict>() {
+                                    let name: String = func_dict
+                                        .get_item("name")?
+                                        .map(|v| v.extract().unwrap_or_default())
+                                        .unwrap_or_default();
+
+                                    let arguments: String = func_dict
+                                        .get_item("arguments")?
+                                        .map(|v| v.extract().unwrap_or_default())
+                                        .unwrap_or_default();
+
+                                    calls.push(ToolCall {
+                                        id,
+                                        call_type,
+                                        function: FunctionCall { name, arguments },
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    if calls.is_empty() {
+                        None
+                    } else {
+                        Some(calls)
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
         result.push(Message {
             role,
             content,
             reasoning: None,
             name,
-            tool_calls: None, // TODO: Handle tool calls
+            tool_calls,
             tool_call_id,
         });
     }
