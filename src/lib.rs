@@ -349,6 +349,25 @@ impl PyLlmClient {
             if let Some(reasoning) = &choice.message.reasoning {
                 message_dict.set_item("reasoning", reasoning)?;
             }
+
+            // Also expose tool_calls if present
+            if let Some(tool_calls) = &choice.message.tool_calls {
+                let tools_list = PyList::empty(py);
+                for tool in tool_calls {
+                    let tool_dict = PyDict::new(py);
+                    tool_dict.set_item("id", &tool.id)?;
+                    tool_dict.set_item("type", &tool.call_type)?;
+
+                    let func_dict = PyDict::new(py);
+                    func_dict.set_item("name", &tool.function.name)?;
+                    func_dict.set_item("arguments", &tool.function.arguments)?;
+
+                    tool_dict.set_item("function", func_dict)?;
+                    tools_list.append(tool_dict)?;
+                }
+                message_dict.set_item("tool_calls", tools_list)?;
+            }
+
             choice_dict.set_item("message", message_dict)?;
 
             choices.append(choice_dict)?;
