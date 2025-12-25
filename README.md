@@ -63,30 +63,32 @@ client.completion(model="cerebras/llama3.1-70b", messages=[...])
 <details>
 <summary>View all providers</summary>
 
-| Provider | Environment Variable |
-|----------|---------------------|
-| OpenAI | `OPENAI_API_KEY` |
-| Anthropic | `ANTHROPIC_API_KEY` |
-| Groq | `GROQ_API_KEY` |
-| Cerebras | `CEREBRAS_API_KEY` |
-| Together | `TOGETHER_API_KEY` |
-| OpenRouter | `OPENROUTER_API_KEY` |
-| DeepSeek | `DEEPSEEK_API_KEY` |
-| Mistral | `MISTRAL_API_KEY` |
-| Fireworks | `FIREWORKS_API_KEY` |
-| Perplexity | `PERPLEXITY_API_KEY` |
-| SambaNova | `SAMBANOVA_API_KEY` |
-| NVIDIA | `NVIDIA_API_KEY` |
-| Hyperbolic | `HYPERBOLIC_API_KEY` |
-| DeepInfra | `DEEPINFRA_API_KEY` |
-| Novita | `NOVITA_API_KEY` |
-| Xiaomi MiMo | `XIAOMI_MIMO_API_KEY` |
-| Venice AI | `VENICE_AI_API_KEY` |
-| GLHF | `GLHF_API_KEY` |
-| Lepton | `LEPTON_API_KEY` |
-| Anyscale | `ANYSCALE_API_KEY` |
-| Ollama | `OLLAMA_API_KEY` |
-| LM Studio | `LMSTUDIO_API_KEY` |
+| Provider | Model Usage | Environment Variable |
+|----------|-------------|---------------------|
+| OpenAI | `openai/your-model-name` | `OPENAI_API_KEY` |
+| Anthropic | `anthropic/your-model-name` | `ANTHROPIC_API_KEY` |
+| Groq | `groq/your-model-name` | `GROQ_API_KEY` |
+| Cerebras | `cerebras/your-model-name` | `CEREBRAS_API_KEY` |
+| Together | `together/your-model-name` | `TOGETHER_API_KEY` |
+| OpenRouter | `openrouter/your-model-name` | `OPENROUTER_API_KEY` |
+| DeepSeek | `deepseek/your-model-name` | `DEEPSEEK_API_KEY` |
+| Mistral | `mistral/your-model-name` | `MISTRAL_API_KEY` |
+| Fireworks | `fireworks/your-model-name` | `FIREWORKS_API_KEY` |
+| Perplexity | `perplexity/your-model-name` | `PERPLEXITY_API_KEY` |
+| SambaNova | `sambanova/your-model-name` | `SAMBANOVA_API_KEY` |
+| NVIDIA | `nvidia/your-model-name` | `NVIDIA_API_KEY` |
+| Hyperbolic | `hyperbolic/your-model-name` | `HYPERBOLIC_API_KEY` |
+| DeepInfra | `deepinfra/your-model-name` | `DEEPINFRA_API_KEY` |
+| Novita | `novita/your-model-name` | `NOVITA_API_KEY` |
+| Xiaomi MiMo | `xiaomi_mimo/your-model-name` | `XIAOMI_MIMO_API_KEY` |
+| Venice AI | `veniceai/your-model-name` | `VENICE_AI_API_KEY` |
+| GLHF | `glhf/your-model-name` | `GLHF_API_KEY` |
+| Lepton | `lepton/your-model-name` | `LEPTON_API_KEY` |
+| Anyscale | `anyscale/your-model-name` | `ANYSCALE_API_KEY` |
+| Ollama | `ollama/your-model-name` | `OLLAMA_API_KEY` |
+| LM Studio | `lmstudio/your-model-name` | `LMSTUDIO_API_KEY` |
+| PublicAI | `publicai/your-model-name` | `PUBLICAI_API_KEY` |
+| Helicone | `helicone/your-model-name` | `HELICONE_API_KEY` |
 
 </details>
 
