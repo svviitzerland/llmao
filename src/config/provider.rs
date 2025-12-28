@@ -19,7 +19,8 @@ pub type ProvidersConfig = HashMap<String, ModelConfig>;
 /// - "provider": {"models": [...], ...} (provider level)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelConfig {
-    /// Required: API keys for this model/provider
+    /// API keys for this model/provider (optional, can use env vars)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub keys: Vec<String>,
 
     /// Optional: List of model names (for provider-level config)

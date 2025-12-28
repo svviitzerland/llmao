@@ -25,6 +25,9 @@ pub struct LlmClient {
     /// Provider registry (metadata from registry.json)
     provider_registry: config::ProviderRegistry,
 
+    /// Fallback provider configs (from user config with custom base_url)
+    custom_providers: HashMap<String, ProviderConfig>,
+
     /// Expanded model configurations (provider/model -> config)
     #[allow(dead_code)] // Will be used for model-specific configuration lookups
     model_configs: HashMap<String, config::ModelConfig>,
@@ -57,6 +60,7 @@ impl LlmClient {
         // Expand user config into individual model configurations
         let mut model_configs = HashMap::new();
         let mut key_pools = HashMap::new();
+        let mut custom_providers: HashMap<String, ProviderConfig> = HashMap::new();
 
         for (key, model_config) in user_config {
             // Check if key contains "/" (specific model) or not (provider-level)
@@ -77,6 +81,28 @@ impl LlmClient {
                     );
                 }
 
+                // If this provider is not in registry and has a base_url, create a custom provider entry
+                if !provider_registry.contains_key(provider_name) {
+                    if let Some(base_url) = &model_config.base_url {
+                        if !custom_providers.contains_key(provider_name) {
+                            custom_providers.insert(
+                                provider_name.to_string(),
+                                ProviderConfig {
+                                    base_url: base_url.clone(),
+                                    api_key_env: None,
+                                    api_keys_env: None,
+                                    api_base_env: None,
+                                    models: vec![],
+                                    param_mappings: model_config.param_mappings.clone(),
+                                    headers: model_config.headers.clone(),
+                                    rate_limit: model_config.rate_limit.clone(),
+                                    special_handling: Default::default(),
+                                },
+                            );
+                        }
+                    }
+                }
+
                 // Store model config
                 model_configs.insert(key.clone(), model_config);
             } else {
@@ -95,6 +121,28 @@ impl LlmClient {
                     );
                 }
 
+                // If this provider is not in registry and has a base_url, create a custom provider entry
+                if !provider_registry.contains_key(provider_name) {
+                    if let Some(base_url) = &model_config.base_url {
+                        if !custom_providers.contains_key(provider_name) {
+                            custom_providers.insert(
+                                provider_name.clone(),
+                                ProviderConfig {
+                                    base_url: base_url.clone(),
+                                    api_key_env: None,
+                                    api_keys_env: None,
+                                    api_base_env: None,
+                                    models: model_config.models.clone(),
+                                    param_mappings: model_config.param_mappings.clone(),
+                                    headers: model_config.headers.clone(),
+                                    rate_limit: model_config.rate_limit.clone(),
+                                    special_handling: Default::default(),
+                                },
+                            );
+                        }
+                    }
+                }
+
                 // Expand each model
                 for model_name in &model_config.models {
                     let model_key = format!("{}/{}", provider_name, model_name);
@@ -105,15 +153,21 @@ impl LlmClient {
 
         Ok(Self {
             provider_registry,
+            custom_providers,
             model_configs,
             key_pools,
             http_client: HttpClient::new()?,
         })
     }
 
-    /// Get a provider configuration from registry
+    /// Get a provider configuration from registry or custom providers
     fn get_provider(&self, name: &str) -> Result<&ProviderConfig> {
-        self.provider_registry
+        // First check built-in registry
+        if let Some(config) = self.provider_registry.get(name) {
+            return Ok(config);
+        }
+        // Then check custom providers (from user config with base_url)
+        self.custom_providers
             .get(name)
             .ok_or_else(|| LlmaoError::ProviderNotFound(name.to_string()))
     }
