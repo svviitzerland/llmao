@@ -291,6 +291,90 @@ impl LlmClient {
         Err(last_error.unwrap_or(LlmaoError::NoKeysAvailable(route.provider)))
     }
 
+    /// Make a streaming completion request
+    /// Returns a vector of chunks (for Python compatibility - we collect all chunks in a blocking call,
+    /// then Python iterates over them. For true streaming, we'd need async Python support.)
+    pub async fn completion_stream(
+        &self,
+        model: &str,
+        request: CompletionRequest,
+    ) -> Result<Vec<api::StreamChunk>> {
+        use futures::StreamExt;
+
+        let route = ModelRoute::parse(model)?;
+        let provider_config = self.get_provider(&route.provider)?;
+
+        // Build request body with stream=true
+        let mut body = serde_json::to_value(&request)?;
+        if let Some(obj) = body.as_object_mut() {
+            obj.insert(
+                "model".to_string(),
+                serde_json::Value::String(route.model_id()),
+            );
+            obj.insert("stream".to_string(), serde_json::Value::Bool(true));
+        }
+
+        // Apply parameter mappings
+        provider_config.apply_param_mappings(&mut body);
+
+        // Build URL
+        let base_url = provider_config.get_base_url();
+        let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));
+
+        // Build extra headers
+        let extra_headers = if provider_config.headers.is_empty() {
+            None
+        } else {
+            let mut headers = reqwest::header::HeaderMap::new();
+            for (key, value) in &provider_config.headers {
+                if let (Ok(name), Ok(val)) = (
+                    reqwest::header::HeaderName::try_from(key.as_str()),
+                    reqwest::header::HeaderValue::from_str(value),
+                ) {
+                    headers.insert(name, val);
+                }
+            }
+            Some(headers)
+        };
+
+        // Get API key
+        let api_key = self.get_api_key(&route.provider)?;
+
+        // Make streaming request
+        let mut stream = self
+            .http_client
+            .post_stream(&url, &body, &api_key, extra_headers.as_ref(), &route.provider)
+            .await?;
+
+        // Collect chunks
+        let mut chunks = Vec::new();
+        let mut buffer = String::new();
+
+        while let Some(result) = stream.next().await {
+            let bytes = result?;
+            buffer.push_str(&String::from_utf8_lossy(&bytes));
+
+            // Process complete lines
+            while let Some(newline_pos) = buffer.find('\n') {
+                let line = buffer[..newline_pos].to_string();
+                buffer = buffer[newline_pos + 1..].to_string();
+
+                if let Some(chunk) = api::parse_sse_line(&line)? {
+                    chunks.push(chunk);
+                }
+            }
+        }
+
+        // Process remaining buffer
+        if !buffer.trim().is_empty() {
+            if let Some(chunk) = api::parse_sse_line(&buffer)? {
+                chunks.push(chunk);
+            }
+        }
+
+        Ok(chunks)
+    }
+
     /// List available providers
     pub fn providers(&self) -> Vec<String> {
         self.provider_registry.keys().cloned().collect()
@@ -506,6 +590,136 @@ impl PyLlmClient {
             None => Ok(None),
         }
     }
+
+    /// Stream a completion request, yielding chunks as they arrive
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (messages, model=None, temperature=None, max_tokens=None, **kwargs))]
+    fn stream_completion(
+        &self,
+        py: Python<'_>,
+        messages: &Bound<'_, PyList>,
+        model: Option<&str>,
+        temperature: Option<f32>,
+        max_tokens: Option<u32>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Py<StreamIterator>> {
+        // Resolve model
+        let model_str = if let Some(m) = model {
+            m.to_string()
+        } else {
+            self.inner.get_default_model().ok_or_else(|| {
+                LlmaoError::Config("No model specified and no models configured.".to_string())
+            })?
+        };
+
+        // Convert Python messages to Rust
+        let rust_messages = convert_messages(messages)?;
+
+        // Build request
+        let mut request = CompletionRequest::new(model_str.clone(), rust_messages);
+
+        if let Some(temp) = temperature {
+            request.temperature = Some(temp);
+        }
+        if let Some(max) = max_tokens {
+            request.max_tokens = Some(max);
+        }
+
+        // Add extra kwargs
+        if let Some(extra) = kwargs {
+            for (key, value) in extra.iter() {
+                let key_str: String = key.extract()?;
+                let json_value = python_to_json(&value)?;
+                request.extra.insert(key_str, json_value);
+            }
+        }
+
+        // Run streaming completion synchronously
+        let client = self.inner.clone();
+        let chunks = self
+            .runtime
+            .block_on(async move { client.completion_stream(&model_str, request).await })?;
+
+        // Create iterator with collected chunks
+        Py::new(py, StreamIterator::new(chunks))
+    }
+}
+
+/// Python iterator for streaming chunks
+#[pyclass]
+struct StreamIterator {
+    chunks: Vec<api::StreamChunk>,
+    index: usize,
+}
+
+impl StreamIterator {
+    fn new(chunks: Vec<api::StreamChunk>) -> Self {
+        Self { chunks, index: 0 }
+    }
+}
+
+#[pymethods]
+impl StreamIterator {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(&mut self, py: Python<'_>) -> Option<Py<PyDict>> {
+        if self.index >= self.chunks.len() {
+            return None;
+        }
+
+        let chunk = &self.chunks[self.index];
+        self.index += 1;
+
+        let dict = PyDict::new(py);
+        dict.set_item("id", &chunk.id).ok()?;
+        dict.set_item("model", &chunk.model).ok()?;
+        dict.set_item("created", chunk.created).ok()?;
+
+        // Extract content from first choice delta
+        if let Some(choice) = chunk.choices.first() {
+            if let Some(content) = &choice.delta.content {
+                dict.set_item("content", content).ok()?;
+            }
+            if let Some(role) = &choice.delta.role {
+                dict.set_item("role", role).ok()?;
+            }
+            if let Some(reason) = &choice.finish_reason {
+                dict.set_item("finish_reason", reason).ok()?;
+            }
+            dict.set_item("index", choice.index).ok()?;
+
+            // Include tool call deltas if present
+            if let Some(tool_calls) = &choice.delta.tool_calls {
+                let tc_list = PyList::empty(py);
+                for tc in tool_calls {
+                    let tc_dict = PyDict::new(py);
+                    tc_dict.set_item("index", tc.index).ok()?;
+                    if let Some(id) = &tc.id {
+                        tc_dict.set_item("id", id).ok()?;
+                    }
+                    if let Some(t) = &tc.call_type {
+                        tc_dict.set_item("type", t).ok()?;
+                    }
+                    if let Some(func) = &tc.function {
+                        let func_dict = PyDict::new(py);
+                        if let Some(name) = &func.name {
+                            func_dict.set_item("name", name).ok()?;
+                        }
+                        if let Some(args) = &func.arguments {
+                            func_dict.set_item("arguments", args).ok()?;
+                        }
+                        tc_dict.set_item("function", func_dict).ok()?;
+                    }
+                    tc_list.append(tc_dict).ok()?;
+                }
+                dict.set_item("tool_calls", tc_list).ok()?;
+            }
+        }
+
+        Some(dict.into())
+    }
 }
 
 /// Convert Python list of message dicts to Rust Messages
@@ -655,6 +869,7 @@ fn completion(
 #[pymodule]
 fn _llmao(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyLlmClient>()?;
+    m.add_class::<StreamIterator>()?;
     m.add_function(wrap_pyfunction!(completion, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

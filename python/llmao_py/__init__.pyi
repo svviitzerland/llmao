@@ -108,6 +108,40 @@ class LLMClient:
             ProviderInfo dict or None if provider not found.
         """
         ...
+    
+    def stream_completion(
+        self,
+        messages: list[dict[str, Any]],
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs: Any
+    ) -> Iterator[dict[str, Any]]:
+        """
+        Stream a chat completion, yielding chunks as they arrive.
+        
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys.
+            model: Model identifier in format "provider/model".
+            temperature: Sampling temperature (0.0 to 2.0).
+            max_tokens: Maximum tokens to generate.
+            **kwargs: Additional provider-specific parameters.
+        
+        Yields:
+            Dict chunks with keys: id, model, created, content, role, 
+            finish_reason, index, tool_calls (optional).
+        
+        Example:
+            ```python
+            for chunk in client.stream_completion(
+                model="cerebras/llama-3.3-70b",
+                messages=[{"role": "user", "content": "Hello!"}]
+            ):
+                if "content" in chunk:
+                    print(chunk["content"], end="", flush=True)
+            ```
+        """
+        ...
 
 def completion(
     model: str,
